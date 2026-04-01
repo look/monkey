@@ -128,6 +128,19 @@ func (i *IntegerLiteral) String() string {
 	return i.Token.Literal
 }
 
+type Boolean struct {
+	Token token.Token
+	Value bool
+}
+
+func (b *Boolean) expressionNode() {}
+func (b *Boolean) TokenLiteral() string {
+	return b.Token.Literal
+}
+func (b *Boolean) String() string {
+	return b.Token.Literal
+}
+
 type PrefixExpression struct {
 	Token    token.Token // the prefix token (example: !)
 	Operator string
@@ -164,8 +177,50 @@ func (i *InfixExpression) String() string {
 	out.WriteString(i.Left.String())
 	out.WriteString(" ")
 	out.WriteString(i.Operator)
-	out.WriteString(i.Right.String())
 	out.WriteString(" ")
+	out.WriteString(i.Right.String())
 	out.WriteString(")")
+	return out.String()
+}
+
+type IfExpression struct {
+	Token       token.Token // the 'if' token
+	Condition   Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
+}
+
+func (i *IfExpression) expressionNode() {}
+func (i *IfExpression) TokenLiteral() string {
+	return i.Token.Literal
+}
+func (i *IfExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("if")
+	out.WriteString(i.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(i.Consequence.String())
+
+	if i.Alternative != nil {
+		out.WriteString("else")
+		out.WriteString(i.Alternative.String())
+	}
+	return out.String()
+}
+
+type BlockStatement struct {
+	Token      token.Token // the { token
+	Statements []Statement
+}
+
+func (b *BlockStatement) expressionNode() {}
+func (b *BlockStatement) TokenLiteral() string {
+	return b.Token.Literal
+}
+func (b *BlockStatement) String() string {
+	var out bytes.Buffer
+	for _, stmt := range b.Statements {
+		out.WriteString(stmt.String())
+	}
 	return out.String()
 }
