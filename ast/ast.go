@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"monkey/token"
 )
@@ -222,5 +223,55 @@ func (b *BlockStatement) String() string {
 	for _, stmt := range b.Statements {
 		out.WriteString(stmt.String())
 	}
+	return out.String()
+}
+
+type FunctionLiteral struct {
+	Token      token.Token // the "fn" token
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+func (f *FunctionLiteral) expressionNode() {}
+func (f *FunctionLiteral) TokenLiteral() string {
+	return f.Token.Literal
+}
+func (f *FunctionLiteral) String() string {
+	var out bytes.Buffer
+	var params = []string{}
+	for _, p := range f.Parameters {
+		params = append(params, p.String())
+	}
+
+	out.WriteString(f.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	out.WriteString(f.Body.String())
+	return out.String()
+}
+
+type CallExpression struct {
+	Token     token.Token // the '(' token
+	Function  Expression
+	Arguments []Expression
+}
+
+func (c *CallExpression) expressionNode() {}
+func (c *CallExpression) TokenLiteral() string {
+	return c.Token.Literal
+}
+func (c *CallExpression) String() string {
+	var out bytes.Buffer
+
+	args := []string{}
+	for _, arg := range c.Arguments {
+		args = append(args, arg.String())
+	}
+
+	out.WriteString(c.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ", "))
+	out.WriteString(")")
 	return out.String()
 }
