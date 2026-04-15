@@ -60,6 +60,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		env.Set(node.Name.Value, val)
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.FunctionLiteral:
+		return &object.Function{Parameters: node.Parameters, Body: node.Body, Env: env}
+	case *ast.CallExpression:
+		f := Eval(node.Function, env)
+		if isError(f) {
+			return f
+		}
+
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+
+		return applyFunction(f, args)
 	}
 
 	return nil
@@ -120,6 +134,20 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 	}
 
 	return val
+}
+
+func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+	var out []object.Object
+
+	for _, exp := range exps {
+		evaluated := Eval(exp, env)
+		if isError(evaluated) {
+			return []object.Object{evaluated}
+		}
+		out = append(out, evaluated)
+	}
+
+	return out
 }
 
 func nativeBoolToBooleanObject(value bool) object.Object {
@@ -199,6 +227,26 @@ func evalIntegerInfixExpression(op string, left, right object.Object) object.Obj
 	}
 }
 
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+	function, ok := fn.(*object.Function)
+	if !ok {
+		return newError("not a function: %s", fn.Type())
+	}
+
+	extendedEnv := newExtendedEnv(function, args)
+	evaluated := Eval(function.Body, extendedEnv)
+	return unwrapReturnValue(evaluated)
+}
+
+func newExtendedEnv(fn *object.Function, args []object.Object) *object.Environment {
+	env := object.NewEnclosedEnvironment(fn.Env)
+	for idx, param := range fn.Parameters {
+		env.Set(param.Value, args[idx])
+	}
+
+	return env
+}
+
 func isTruthy(obj object.Object) bool {
 	switch obj {
 	case FALSE, NULL:
@@ -214,4 +262,12 @@ func isError(obj object.Object) bool {
 
 func newError(format string, a ...any) *object.Error {
 	return &object.Error{Message: fmt.Sprintf(format, a...)}
+}
+
+func unwrapReturnValue(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+
+	return obj
 }
