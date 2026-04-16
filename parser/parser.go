@@ -19,6 +19,7 @@ const (
 	PRODUCT     // *
 	PREFIX      // -X or !X
 	CALL        // myFunction(X)
+	INDEX       // array[index]
 )
 
 // Infix operator precidence map.
@@ -32,6 +33,7 @@ var precidences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
 	token.LPAREN:   CALL,
+	token.LBRACKET: INDEX,
 }
 
 // Pratt parsing functions
@@ -81,6 +83,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	// read two tokens so curToken and peekToken are both set
 	p.nextToken()
@@ -428,6 +431,18 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	}
 
 	return out
+}
+
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	tok := p.curToken
+	p.nextToken()
+	index := p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return &ast.IndexExpression{Token: tok, Left: left, Index: index}
 }
 
 func (p *Parser) expectPeek(tokenType token.TokenType) bool {
